@@ -1,8 +1,21 @@
 #!/usr/bin/env bash
-source frameowrk.sh
+source framework.sh
 
 get_term
 setup_term
+
+# Unset values just in case
+_core=
+_arch=
+_disk=
+_video=
+_locale=
+_keymap=
+_hostname=
+_rootpass=
+_timezone=
+_username=
+_userpass=
 
 main_menu() {
 	local running=true
@@ -42,6 +55,10 @@ core_menu() {
 		'Plan9 coreutils, including non-posix extras such as rc shell, but missing bash, gawk etc. Not recommended for regular users'
 	)
 	dual_select_box
+	case "$reply" in
+		'GNU'*) _core="gnu" ;;
+		'plan9'*) _core="9" ;;
+	esac
 }
 
 arch_menu() {
