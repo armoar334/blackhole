@@ -177,7 +177,7 @@ final_menu() {
 
 build_script() {
 	# Host side
-	true
+	clear
 	mkfs.vfat $_boot
 	mkfs.ext4 $_root
 	mount $_root /mnt/
@@ -192,7 +192,9 @@ build_script() {
 	mount -t sysfs none /mnt/sys
 	mount --rbind /dev /mnt/dev
 	mount --rbind /run /mnt/run
-	cat <<EOF | chroot /mnt
+
+	# Chroot
+	cat <<-EOF | chroot /mnt
 	echo "$_hostname" > /etc/hostname
 	sed -e "s/^KEYMAP=.*/KEYMAP=$_keymap/g" -i /etc/rc.conf
 	echo "$_locale" >> /etc/default/libc-locales
