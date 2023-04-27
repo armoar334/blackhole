@@ -180,9 +180,9 @@ build_script() {
 	clear
 	mkfs.vfat $_boot
 	mkfs.ext4 $_root
-	mount $_root /mnt/
+	mount /dev/$_root /mnt/
 	mkdir -p /mnt/boot/efi/
-	mount $_boot /mnt/boot/efi/
+	mount /dev/$_boot /mnt/boot/efi/
 	REPO=https://repo-default.voidlinux.org/current
 	ARCH=x86_64
 	mkdir -p /mnt/var/db/xbps/keys
