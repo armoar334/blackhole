@@ -41,13 +41,50 @@ draw_select_list() {
 	local botc=$4
 	local current=$5
 
-	for i in $( seq 0 "${#list1[@]}" )
+	local topop=$(( $current - ( botl - topl ) ))
+	[[ $topop -le 0 ]] && topop=0
+	
+	local botop=$(( ( botl - topl ) + topop ))
+	[[ $botop -ge ${#list1[@]} ]] && botop=${#list1[@]}
+
+	for i in $( seq $topop $botop )
 	do
-		printf '\e[%s;%sH' "$(( topl + i ))" "$topc"
+		printf '\e[%s;%sH' "$(( ( topl + i ) - topop ))" "$topc"
 		printf '%s%-*s' "${list1[$i]}" "$(( ( botc - topc ) - ${#list1[$i]}))"
 	done
-	printf '\e[%s;%sH' "$(( topl + current ))" "$topc"
+
+	printf '\e[%s;%sH' "$(( ( topl + current ) - topop ))" "$topc"
 	printf '\e[7m%s%-*s\e[0m' "${list1[$current]}" "$(( ( botc - topc ) - ${#list1[$current]}))"
+}
+
+draw_multi_list() {
+	local topl=$1
+	local topc=$2
+	local botl=$3
+	local botc=$4
+	local current=$5
+
+	local topop=$(( $current - ( botl - topl ) ))
+	[[ $topop -le 0 ]] && topop=0
+	
+	local botop=$(( ( botl - topl ) + topop ))
+	[[ $botop -ge ${#list1[@]} ]] && botop=${#list1[@]}
+
+	printf '\e[H %s ' $topop
+	
+	for i in $( seq $topop $botop )
+	do
+		printf '\e[%s;%sH' "$(( ( topl + i ) - topop ))" "$topc"
+		case "${multi_list[$i]}" in
+			'true') printf '[x]%s%-*s' "${list1[$i]}" "$(( ( botc - topc ) - ${#list1[$i]} - 3 ))" ;;
+			'false') printf '[ ]%s%-*s' "${list1[$i]}" "$(( ( botc - topc ) - ${#list1[$i]} - 3 ))" ;;
+		esac
+	done
+	printf '\e[%s;%sH' "$(( ( topl + current ) - topop ))" "$topc"
+	case "${multi_list[$current]}" in
+		'true') printf '\e[7m[x]%s%-*s\e[0m' "${list1[$current]}" "$(( ( botc - topc ) - ${#list1[$current]} - 3 ))" ;;
+		'false') printf '\e[7m[ ]%s%-*s\e[0m' "${list1[$current]}" "$(( ( botc - topc ) - ${#list1[$current]} - 3 ))" ;;
+	esac
 }
 
 draw_describe_pane() {
@@ -87,7 +124,7 @@ select_box() {
 
 	while $running;
 	do
-		printf '%s' "$(draw_select_list 2 2 $lines $columns $current)"
+		printf '%s' "$(draw_select_list 2 2 $(( lines - 1 )) $columns $current)"
 		IFS= read -rsn1 char
 		case "$char" in
 			$'\e')
@@ -107,7 +144,52 @@ select_box() {
 	done
 }
 
-#multi_select_box() {}
+multi_select_box() {
+	local running=true
+	local char
+	local current=0
+
+	multi_list=()
+	for i in ${list1[@]}
+	do
+		multi_list+=('false')
+	done
+
+	draw_box 1 1 $lines $columns
+	printf '\e[1;2H%s' "$title1"
+
+	while $running;
+	do
+		printf '%s' "$(draw_multi_list 2 2 $(( lines - 1 )) $columns $current)"
+		IFS= read -rsn1 char
+		case "$char" in
+			$'\e')
+				read -rsn2 char
+				case "$char" in
+					'[A') (( current -= 1 )) ;;
+					'[B') (( current += 1 )) ;;
+					'[5') current=0 ;;
+					'[6') current="${#list1[@]}" ;;
+				esac ;;
+			' ')
+				case "${multi_list[$current]}" in
+					'true') multi_list[$current]='false' ;;
+					'false') multi_list[$current]='true' ;;
+				esac ;;
+			'')
+				running=false
+				reply=''
+				for i in $(seq 0 $(( ${#list1[@]} - 1 )))
+				do
+					case "${multi_list[$i]}" in
+						'true') reply+="${list1[$i]} " ;;
+					esac
+				done ;;
+		esac
+ 		[[ "$current" -le 0 ]] && current=0
+		[[ "$current" -ge "$(( ${#list1[@]} - 1 ))" ]] && current="$(( ${#list1[@]} - 1 ))"
+	done
+}
 
 # Dual pane selections
 
@@ -116,6 +198,12 @@ dual_select_box() {
 	local char
 	local current=0
 	local midway=$((columns / 2))
+
+	multi_list=()
+	for i in ${list1[@]}
+	do
+		multi_list+=('false')
+	done
 	
 	draw_box 1 1 $lines $midway
 	draw_box 1 $midway $lines $columns
@@ -124,7 +212,7 @@ dual_select_box() {
 	while $running;
 	do
 		printf '%s' "$(
-			draw_select_list 2 2 $lines $midway $current
+			draw_select_list 2 2 $(( lines - 1 )) $midway $current
 			draw_box 1 $midway $lines $columns
 			printf '\e[1;%sH%s' $(( midway + 1 )) $title2
 			draw_describe_pane 2 $(( midway + 1 )) $lines $columns $current
@@ -148,7 +236,54 @@ dual_select_box() {
 	done
 }
 
-#dual_multi_select_box() {}
+dual_multi_select_box() {
+	local running=true
+	local char
+	local current=0
+	local midway=$((columns / 2))
+	
+	draw_box 1 1 $lines $midway
+	draw_box 1 $midway $lines $columns
+	printf '\e[1;2H%s' "$title1"
+
+	while $running;
+	do
+		printf '%s' "$(
+			draw_multi_list 2 2 $(( lines - 1 )) $midway $current
+			draw_box 1 $midway $lines $columns
+			printf '\e[1;%sH%s' $(( midway + 1 )) $title2
+			draw_describe_pane 2 $(( midway + 1 )) $lines $columns $current
+		)"
+		IFS= read -rsn1 char
+		case "$char" in
+			$'\e')
+				read -rsn2 char
+				case "$char" in
+					'[A') (( current -= 1 )) ;;
+					'[B') (( current += 1 )) ;;
+					'[5') current=0 ;;
+					'[6') current="${#list1[@]}" ;;
+				esac ;;
+			' ')
+				case "${multi_list[$current]}" in
+					'true') multi_list[$current]='false' ;;
+					'false') multi_list[$current]='true' ;;
+				esac ;;
+			'')
+				running=false
+				reply=''
+				for i in $(seq 0 $(( ${#list1[@]} - 1 )))
+				do
+					case "${multi_list[$i]}" in
+						'true') reply+="${list1[$i]} " ;;
+					esac
+				done ;;
+		esac
+ 		[[ "$current" -le 0 ]] && current=0
+		[[ "$current" -ge "$(( ${#list1[@]} - 1 ))" ]] && current="$(( ${#list1[@]} - 1 ))"
+	done
+
+}
 
 # Text entry
 text_enter() {
