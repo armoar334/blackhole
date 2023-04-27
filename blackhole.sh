@@ -178,8 +178,8 @@ final_menu() {
 build_script() {
 	# Host side
 	clear
-	mkfs.vfat $_boot
-	mkfs.ext4 $_root
+	mkfs.vfat /dev/$_boot
+	mkfs.ext4 /dev/$_root
 	mount /dev/$_root /mnt/
 	mkdir -p /mnt/boot/efi/
 	mount /dev/$_boot /mnt/boot/efi/
