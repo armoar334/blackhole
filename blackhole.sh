@@ -95,7 +95,7 @@ disk_menu() {
 				cfdisk "/dev/$reply" ;;
 			'Select'*)
 				title1='Select a partition for GRUB to be installed'
-				list1=($(lsblk -o NAME | grep '^[^[:alnum:]]' | grep -v NAME | cut -c 5-))
+				list1=($(lsblk -o NAME | grep '^[^[:alnum:]]' | grep -v NAME | sed 's/[^[:alnum:]]//g'))
 				select_box
 				_boot="$reply"
 				title1='Select a root partition'
